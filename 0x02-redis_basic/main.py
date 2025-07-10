@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
-"""Main test script for the Cache class"""
-import redis
-from exercise import Cache
+"""
+Main test file for Cache
+"""
+Cache = __import__('exercise').Cache
 
 cache = Cache()
-data = b"hello"
-key = cache.store(data)
 
-print("Stored key:", key)
+TEST_CASES = {
+    b"foo": None,  # store as bytes
+    123: int,      # store as integer
+    "bar": lambda d: d.decode("utf-8")  # store as string and decode manually
+}
 
-local_redis = redis.Redis()
-print("Stored value:", local_redis.get(key))
+for value, fn in TEST_CASES.items():
+    key = cache.store(value)
+    print(f"Stored: {value} (key: {key})")
+    result = cache.get(key, fn=fn)
+    print(f"Retrieved: {result}")
+    assert result == value
