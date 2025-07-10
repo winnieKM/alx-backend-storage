@@ -12,13 +12,29 @@ from functools import wraps
 def count_calls(method: Callable) -> Callable:
     """
     Decorator that counts how many times a method is called.
-    Uses Redis to increment the count for the method's qualified name.
     """
     @wraps(method)
     def wrapper(self, *args, **kwargs):
         key = method.__qualname__
-        self._redis.incr(key)  # increment the call count
+        self._redis.incr(key)
         return method(self, *args, **kwargs)
+    return wrapper
+
+
+def call_history(method: Callable) -> Callable:
+    """
+    Decorator that stores the history of inputs and outputs for a method.
+    """
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        input_key = method.__qualname__ + ":inputs"
+        output_key = method.__qualname__ + ":outputs"
+
+        self._redis.rpush(input_key, str(args))  # store input
+        result = method(self, *args, **kwargs)
+        self._redis.rpush(output_key, str(result))  # store output
+
+        return result
     return wrapper
 
 
@@ -35,15 +51,10 @@ class Cache:
         self._redis.flushdb()
 
     @count_calls
+    @call_history
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Stores data in Redis with a randomly generated key.
-
-        Args:
-            data: Data to store (str, bytes, int, or float)
-
-        Returns:
-            The key as a string
         """
         key = str(uuid.uuid4())
         self._redis.set(key, data)
@@ -52,13 +63,6 @@ class Cache:
     def get(self, key: str, fn: Optional[Callable] = None) -> Union[str, bytes, int, float, None]:
         """
         Retrieves data from Redis and optionally converts it using `fn`.
-
-        Args:
-            key: Redis key
-            fn: Optional function to apply to the returned value
-
-        Returns:
-            The original value, possibly transformed, or None if the key doesn’t exist.
         """
         value = self._redis.get(key)
         if value is None:
@@ -68,23 +72,11 @@ class Cache:
     def get_str(self, key: str) -> Optional[str]:
         """
         Retrieves a string from Redis.
-
-        Args:
-            key: Redis key
-
-        Returns:
-            Decoded string value, or None
         """
         return self.get(key, fn=lambda d: d.decode("utf-8"))
 
     def get_int(self, key: str) -> Optional[int]:
         """
         Retrieves an integer from Redis.
-
-        Args:
-            key: Redis key
-
-        Returns:
-            Integer value, or None
         """
         return self.get(key, fn=int)
