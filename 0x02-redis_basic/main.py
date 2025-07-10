@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
-""" Main file to test replay """
+""" Test for get_page with Redis """
 
-from exercise import Cache, replay
+from web import get_page
+import redis
 
-cache = Cache()
-cache.store("foo")
-cache.store("bar")
-cache.store(42)
+r = redis.Redis()
 
-replay(cache.store)
+url = "http://slowwly.robertomurray.co.uk/delay/3000/url/http://example.com"
+
+# First request — slow and uncached
+print(get_page(url))
+
+# Second request — fast from cache
+print(get_page(url))
+
+# Check counter
+print("Access count:", r.get(f"count:{url}").decode())
