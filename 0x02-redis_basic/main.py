@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
-"""
-Main test file for Cache
-"""
+""" Main file to test Task 2 """
+
 Cache = __import__('exercise').Cache
 
 cache = Cache()
 
-TEST_CASES = {
-    b"foo": None,  # store as bytes
-    123: int,      # store as integer
-    "bar": lambda d: d.decode("utf-8")  # store as string and decode manually
-}
+# Call store 3 times
+cache.store(b"first")
+print(cache.get(cache.store.__qualname__))
 
-for value, fn in TEST_CASES.items():
-    key = cache.store(value)
-    print(f"Stored: {value} (key: {key})")
-    result = cache.get(key, fn=fn)
-    print(f"Retrieved: {result}")
-    assert result == value
+cache.store(b"second")
+cache.store(b"third")
+print(cache.get(cache.store.__qualname__))
